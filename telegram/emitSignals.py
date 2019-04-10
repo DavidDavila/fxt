@@ -33,12 +33,13 @@ with client:
       data[dialog.message.to_id.channel_id] = dialog.name;
       @client.on(events.NewMessage(chats=dialog.name))
       async def my_event_handler(event):
+          print(data[event.message.to_id.channel_id],event.date)
           #client.get_entity(PeerChannel(event.message.to_id)
-          msg = event.raw_text
-          msg = msg.upper().strip()
+          msg = event.raw_text 
+          msg = msg.upper().replace(':',' : ').replace('TP 1 ','TP').replace('TP 1 ','TP').replace('\'','').replace('\"',' : ').replace('-',' ').replace('(',' ').replace(')',' ').strip().replace('\n', ' ').replace('\r', ' ').rstrip()
           msg = msg.replace("GOLD","XAUUSD")
           msg = msg.replace("OIL","USOIL")
-          
+          msg2 = msg
           #tp = c.split('TP|T.P')[1]
           #tpValue = re.search("\d+", tp).group(0)
           for posiblePar in pares:
@@ -55,11 +56,11 @@ with client:
                 order = order.group(0)
                 msgArray = msg.split(" ")
                 for i,text in enumerate(msgArray):
-                  if(re.search('^SELL$|^BUY$', text)):
+                  if(re.search('^SELL$|^BUY$|^SELL@$|^BUY@$', text)):
                     msgArray[i]= 'ZXCZXCZXC'
-                  if(re.search('^SL$|^S.L$|^STOPLOSS$|^SL1$', text)):
+                  if(re.search(':SL1$|:SL$|SL1$|^SL@$|^S.L$|^STOPLOSS$|^STOPLOSS@$|^SL$', text)):
                     msgArray[i]= 'SL'
-                  if(re.search('^TP$|^T.P$|^TAKEPROFITS$|^TP1$', text)):
+                  if(re.search(':TP1$|:TP$|TP1|^TP@$|^T.P$|^TAKEPROFITS$|^TARGET@$|^TP$', text)):
                     msgArray[i]= 'TP'
                   #print(text, i)
                   if(re.search('HTTP', text)):
@@ -82,14 +83,15 @@ with client:
                   if len(slCrude) > 1 :
                     slCrude = ''.join([str(x) for x in slCrude])
                     sl = re.search("\d+(\.\d{1,4})?", slCrude).group(0) 
+                
                   if sl is not None and tp is not None:
                     if sl != tp and sl != entry and tp != entry:
-                      signal = '{"entry":' + '"' + entry + '", "order":"' + order + '", "par":"' + par + '", "provider":"' + data[event.message.to_id.channel_id] + '", "sl":"' + sl  + '", "tp":"' + tp +'"}'
+                      signal = '{"entry":' + '"' + entry + '", "order":"' + order + '", "par":"' + par + '","msg":"' + msg + '", "provider":"' + data[event.message.to_id.channel_id] + '", "sl":"' + sl  + '", "tp":"' + tp +'"}'
                       print(signal)
                       ws.send(signal)
                      
                          
-          print(data[event.message.to_id.channel_id],event.date)
+          
 
 myself = client.start()
 

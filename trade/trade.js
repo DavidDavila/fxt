@@ -30,56 +30,70 @@ export default class Trade {
   setSignal(par, signal) {
     DDBB.setNewSignal(par, signal)   
   }
-  async checkIfNewActiveOrder() {
+  checkIfNewActiveOrder() {
 
     for( let par in this.signals) {   
       for (let id in this.signals[par]) {
         let signal = this.signals[par][id];
-        if (this.activePars &&(signal.order === 'SELL' && signal.entry <= this.activePars[par][signal.order] )||
-          (signal.order === 'BUY' && signal.entry >= this.activePars[par][signal.order] ) ) {
-
-            DDBB.setActiveSignal(signal, id );
-            !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+        if(this.activePars[par]) {
+          if ( signal && this.activePars && this.activePars[par] &&(signal.order === 'SELL' && signal.entry <= this.activePars[par][signal.order] )||
+            (signal.order === 'BUY' && signal.entry >= this.activePars[par][signal.order] ) ) {
+              DDBB.setActiveSignal(signal, id );
+              this.signals && this.activeTrades && !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+             
+          }
         }
+
       }
     }   
   }
   checkIfTPorSL() {
     for( let par in this.activeTrades) {   
      for (let id in this.activeTrades[par]) {
-        let signal = this.activeTrades[par][id];
-        switch(signal.order) {
-          case 'BUY':          
-            if(this.activePars[par]['BUY'] >= signal.tp){
-               DDBB.setHistoricalSignal(signal, id, 'tp' )
-              !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
-
-               break;
-            }
-            if(this.activePars[par]['BUY'] <= signal.sl ) {
-              DDBB.setHistoricalSignal(signal, id, 'sl' )  
-              !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
-
-              break;             
-            }
-
+        let signal 
+        try {
+          signal = this.activeTrades[par][id];
+        }catch(e) {
           break;
-          case 'SELL':
+        }
+        if(this.activePars[par] && signal ){
           
-            if(this.activePars[par]['SELL'] <= signal.tp){
-               DDBB.setHistoricalSignal(signal, id, 'tp' )
-              !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+          switch(signal.order) {
+            case 'BUY':
+              signal.max = signal.max  || signal.entry;
+              signal.max < this.activePars[par]['BUY'] && (signal.max = this.activePars[par]['BUY']);
+              if(this.activePars[par]['BUY'] >= signal.tp){
+                 DDBB.setHistoricalSignal(signal, id, 'tp' )
+                !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
 
-               break;
-            }
-            if(this.activePars[par]['SELL'] >= signal.sl ) {
+                 break;
+              }
+              if(this.activePars[par]['BUY'] <= signal.sl ) {
+                DDBB.setHistoricalSignal(signal, id, 'sl' )  
+                !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
 
-              DDBB.setHistoricalSignal(signal, id, 'sl' ) 
-              !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+                break;             
+              }
 
-              break;              
-            }
-        }         
+            break;
+            case 'SELL':
+              signal.max = signal.max  || signal.entry;
+              signal.max > this.activePars[par]['SELL'] && (signal.max = this.activePars[par]['SELL']);
+              if(this.activePars[par]['SELL'] <= signal.tp){
+                 DDBB.setHistoricalSignal(signal, id, 'tp' )
+                !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+
+                 break;
+              }
+              if(this.activePars[par]['SELL'] >= signal.sl ) {
+
+                DDBB.setHistoricalSignal(signal, id, 'sl' ) 
+                !this.signals[par] && !this.activeTrades[par]  && this.fx.deletePar(signal.par);
+
+                break;              
+              }
+          }          
+        }        
       }
     }   
 
@@ -88,11 +102,11 @@ export default class Trade {
     this.activePars;
     this.fx = new Fx();
     this.fx.activeParsObservable.subscribe( (recievedPars => {
-      console.log(recievedPars)
       this.firstTime && this.getSignalsDDBB();
       this.firstTime = false;
       if(recievedPars && Object.keys(recievedPars).length > 0) {       
           this.ws.connection && this.ws.sendToClient(JSON.stringify(recievedPars))
+          console.log('pars--> \n', recievedPars, '\n')
           this.activePars = recievedPars;   
           this.signals && this.checkIfNewActiveOrder();
           this.activeTrades && this.checkIfTPorSL();        
